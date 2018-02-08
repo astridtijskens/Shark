@@ -1,4 +1,0 @@
-recursive-include Example * 
-recursive-include shark/data *
-recursive-include Manual *.pdf
-include *.txt
