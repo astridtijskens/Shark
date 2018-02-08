@@ -9,7 +9,6 @@ import pandas as pd
 import os
 import numpy as np
 import math as m
-import pickle
 
 def extractClimateYears(path_climate, year_start, years, number, path_save=None, exclude=list()):
     climateparam_list = supp.getFileList(path_climate, '.ccd')[0]
@@ -27,7 +26,10 @@ def extractClimateYears(path_climate, year_start, years, number, path_save=None,
         value = value[row_start:row_end]
         if path_save != None:
             # save ccd file
-            supp.saveccd(os.path.join(path_save,'%03i_%s' %(number,c)), value)
+            if number != None:
+                supp.saveccd(os.path.join(path_save,'%03i_%s' %(number,c)), value)
+            else:
+                supp.saveccd(os.path.join(path_save,'%s' % c), value)
         else:
             clim[c.replace('.ccd','')] = value
     if path_save == None:
@@ -106,8 +108,12 @@ def calcIntClimateEN13788(path_climate, load, number, path_save=None):
     if path_save == None:
         return Ti, RHi
     else:
-        supp.saveccd(os.path.join(path_save,'%03i_Temperature.ccd' % number), Ti)
-        supp.saveccd(os.path.join(path_save,'%03i_RelativeHumidity.ccd' % number), RHi)
+        if number != None:
+            supp.saveccd(os.path.join(path_save,'%03i_Temperature.ccd' % number), Ti)
+            supp.saveccd(os.path.join(path_save,'%03i_RelativeHumidity.ccd' % number), RHi)
+        else:
+            supp.saveccd(os.path.join(path_save,'Temperature.ccd'), Ti)
+            supp.saveccd(os.path.join(path_save,'RelativeHumidity.ccd'), RHi)
 
 def calcIntClimateEN15026(path_climate, load, number, path_save=None):
     # Load exterior climate temperature
@@ -146,8 +152,12 @@ def calcIntClimateEN15026(path_climate, load, number, path_save=None):
     if path_save == None:
         return Ti, RHi
     else:
-        supp.saveccd(os.path.join(path_save,'%03i_Temperature.ccd' % number), Ti)
-        supp.saveccd(os.path.join(path_save,'%03i_RelativeHumidity.ccd' % number), RHi)
+        if number != None:
+            supp.saveccd(os.path.join(path_save,'%03i_Temperature.ccd' % number), Ti)
+            supp.saveccd(os.path.join(path_save,'%03i_RelativeHumidity.ccd' % number), RHi)
+        else:
+            supp.saveccd(os.path.join(path_save,'Temperature.ccd'), Ti)
+            supp.saveccd(os.path.join(path_save,'RelativeHumidity.ccd'), RHi)
 
 def calcRainLoad(path_climate, ori, number, loc=[5,5], path_save=None):
     #If the inclination of the wall is not specified, set default incination 90 deg
@@ -155,7 +165,7 @@ def calcRainLoad(path_climate, ori, number, loc=[5,5], path_save=None):
         ori = [ori]
         ori.append(90)
     # Load exterior climate (rain, wind direction, wind speed)
-    if path_climate[-4:] == '%03i_' % number:
+    if number != None and path_climate[-4:] == '%03i_' % number:
         rain_h = supp.readccd(path_climate+'VerticalRain.ccd')
         winddir = supp.readccd(path_climate+'WindDirection.ccd')
         windvel = supp.readccd(path_climate+'WindVelocity.ccd')
@@ -165,8 +175,10 @@ def calcRainLoad(path_climate, ori, number, loc=[5,5], path_save=None):
         windvel = supp.readccd(path_climate+'WindVelocity.ccd')
     # Load catch ratio and catch ratio parameters
     catch_ratio = np.load(os.path.join(os.path.dirname(__file__), 'data', 'catch_ratio.npy'))
-    pickle_in = open(os.path.join(os.path.dirname(__file__), 'data', 'catch_param'),'rb')
-    catch_param = pickle.load(pickle_in)
+    catch_param = {'height': [0.0, 5.0, 8.0, 8.5, 9.0, 9.25, 9.5, 9.75, 10.0],
+                   'horizontal rain intensity': [0.0, 0.1, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 12.0, 15.0, 20.0, 25.0, 30.0],
+                   'width': [0.0, 2.5, 5.0, 7.5, 10.0],
+                   'wind speed': [0, 1, 2, 3, 4, 5, 6, 8, 10]}
     
     # Convert deg to rad
     ori = [m.radians(x) for x in ori]
@@ -254,4 +266,157 @@ def calcRainLoad(path_climate, ori, number, loc=[5,5], path_save=None):
     if path_save == None:
         return rain
     else:
-        supp.saveccd(os.path.join(path_save,'%03i_VerticalRain.ccd' % number), rain)
+        if number != None:
+            supp.saveccd(os.path.join(path_save,'%03i_VerticalRain.ccd' % number), rain)
+        else:
+            supp.saveccd(os.path.join(path_save,'VerticalRain.ccd'), rain)
+
+def calcSWRad(path_climate, ori, sun_abs, number, loc_geo=50.8, gr_relf=0.2, path_save=None):
+    # Inner functions
+    def signum(val):
+        if val < 0.0: return -1.0
+        else: return 1.0
+    
+    def f_deltG(t):
+        return Fakt1 * m.sin(Pi2_365 *(t + Kt1))
+    
+    def f_delta(t):
+        return f_deltG(t) * Pi_180
+    
+    def f_sin_h(phi, t):
+        delt = Fakt2 * m.sin(Pi2_365 *(t + Kt1))
+        ret = m.sin(phi) * m.sin(delt)
+        return ret - m.cos(phi) * m.cos(delt) * m.cos(Pi2 * t)
+    
+    def f_cos_h(phi, t):
+        sinh = f_sin_h(phi, t)
+        return m.sqrt(1 - sinh * sinh)
+    
+    def f_h_t(phi, t):
+    	return m.asin(f_sin_h(phi, t))
+    
+    def f_D_t(sinh):
+        if m.asin(sinh) >= 0.0: return  1.0
+        else: return  0.0
+    
+    def f_sin_a(phi, t):
+        ret = m.cos(f_delta(t)) * m.sin(Pi2 * t)
+        return ret / f_cos_h( phi, t)
+    
+    def f_sinK1(t):
+        return Fakt2 * m.sin(Pi2_365 * (t + Kt1))
+    
+    def f_cosK1(t):
+        return Fakt3 * m.cos(Pi2_365 * (t + Kt1))
+    
+    def f_csKt(t):
+        return m.cos(f_sinK1(t))
+    
+    def f_ssKt(t):
+        return m.sin(f_sinK1(t))
+    
+    def f_dsin_a(phi, t):
+        sPhi = m.sin(phi)
+        cPhi = m.cos(phi)
+        spi2t = m.sin(Pi2 * t)
+        cpi2t = m.cos(Pi2 * t)
+        CssKt = f_ssKt(t)
+        CcsKt = f_csKt(t)
+        fakt = sPhi * CssKt - cPhi * CcsKt * cpi2t
+        Nenner = m.sqrt(1.0 - fakt * fakt)
+        CcosK1 = f_cosK1(t)
+    
+        f1 = -CssKt * CcosK1 * spi2t / Nenner
+        f1 = f1 + CcsKt * cpi2t * Pi2 / Nenner
+        f2 = sPhi * CssKt - cPhi * CcsKt * cpi2t
+        f2 = f2 * CcosK1 * (sPhi * CcsKt *  + cPhi * CssKt * cpi2t) + cPhi * CcsKt * spi2t * Pi2
+        f2 = f2 * CcsKt * spi2t / Nenner / Nenner
+        return f1 + f2
+    
+    def f_a1(phi, t):
+        ret = f_sin_a(phi, t) * -1.0
+        return ret * signum(f_dsin_a(phi, t))
+    
+    def f_B2(sinh, beta, phi, t):
+        sina = f_sin_a(phi, t)
+        ret = m.sqrt(1.0 - sina * sina) * m.cos(beta) * signum(f_dsin_a(phi, t))
+        ret = ret + sina * m.sin(beta)
+        ret = ret / sinh
+        return ret * m.sqrt(1.0 - sinh * sinh)
+    
+    def f_S(Dt, b2, alpha):
+        calpha = m.cos(alpha)
+        if Dt == 0.0 or calpha == 1.0:
+            if calpha > 0.0: return 1.0
+            else: return 0.0
+        else:
+            s1 = calpha + m.sin(alpha) * b2 * Dt
+            if s1 > 0.0: return 1.0
+            else: return 0.0
+    
+    #If the inclination of the wall is not specified, set default incination 90 deg
+    if not isinstance(ori, list):
+        ori = [ori]
+        ori.append(90)
+    # Load exterior climate (rain, wind direction, wind speed)
+    if number != None and path_climate[-4:] == '%03i_' % number:
+        dirrad = supp.readccd(path_climate+'DirectRadiation.ccd')
+        diffrad = supp.readccd(path_climate+'DiffuseRadiation.ccd')
+    else:
+        dirrad = supp.readccd(path_climate+'DirectRadiation.ccd')
+        diffrad = supp.readccd(path_climate+'DiffuseRadiation.ccd')
+    # Parameters
+    alpha = m.radians(ori[1]) # inlination, radians
+    beta = m.radians(ori[0]) # orientation, radians
+    phi = m.radians(loc_geo) # geographical location, radians
+    
+    # Calculate H_soldir
+    # f_DirRad
+    f_DirRad = list()
+    Pi2_365 = m.pi*2/365
+    Pi_180 = m.pi/180
+    Pi2 = m.pi*2
+    Kt1 = 10 + 365/4
+    Fakt1 = -23.5
+    Fakt2 = Fakt1*Pi_180
+    Fakt3 = Fakt1*Pi_180*Pi2_365
+    for s in range(1,len(dirrad)+1): # Loop over time [h]
+        t = s/24 #Loop over time [d]
+        sinh = f_sin_h(phi, t) # sun height h
+        Dt = f_D_t(sinh)
+        if Dt == 0.0: # if sun is to low, no radiation on surface
+            f_DirRadfact = 0.0
+        else:
+            cB2 = f_B2(sinh, beta, phi, t)
+            cS = f_S(Dt, cB2, alpha)
+            if cS == 0.0:
+                f_DirRadfact = 0.0
+            else:
+                ret = m.cos(alpha)
+                ret = ret + m.sin(alpha) * cB2
+                ret = ret * cS * Dt
+                if ret < 0.0:
+                    f_DirRadfact = 0.0
+                else:
+                    if ret > 5.0:
+                        f_DirRadfact = 5.0
+                    else:
+                        f_DirRadfact = ret
+        f_DirRad.append(f_DirRadfact)
+    # H_soldir
+    H_dir_n = [f*dirr for f,dirr in zip(f_DirRad,dirrad)] # W/m2
+    
+    # Calculate H_soldiff
+    H_diff_n = [m.cos(alpha/2)*m.cos(alpha/2)*diffr + gr_relf*m.sin(alpha/2)*m.sin(alpha/2)*(dirr+diffr) for diffr,dirr in zip(dirrad,diffrad)] # W/m2
+    
+    # Calculate H_sol
+    H_sol = [sun_abs*(Hdir + Hdiff) for Hdir,Hdiff in zip(H_dir_n,H_diff_n)] # W/m2
+    
+    # Save short wave radiation to ccd or return rain load
+    if path_save == None:
+        return H_sol
+    else:
+        if number != None:
+            supp.saveccd(os.path.join(path_save,'%03i_ShortWaveRadiation.ccd' % number), H_sol)
+        else:
+            supp.saveccd(os.path.join(path_save,'ShortWaveRadiation.ccd'), H_sol)

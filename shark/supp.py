@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import numpy as np
 from collections import Counter
+import re
 
 def getFileList(dir_name, ext=''):
     file_dir_list = list()
@@ -414,13 +415,14 @@ def saveccd(path, value):
     df['day'] = np.repeat(list(range(days)),24).tolist()
     df['hour'] = ['%02d:00:00' % x for x in range(24)]*days
     df['value'] = value
-    climateparam = os.path.basename(path)[4:-4]
+    climateparam = re.sub('[0-9_]', '', os.path.basename(path)[:-4])
     df.to_csv(path, header=[headerccd(climateparam),'',''], sep=' ', index=False, quotechar=' ')
 
 def headerccd(climateparam):
     param_header = pd.DataFrame([{'parameter':'CloudCover', 'header': 'CLOUDCOV   ---'},
                                  {'parameter':'DiffuseRadiation', 'header': 'DIFRAD   W/m2'},
                                  {'parameter':'DirectRadiation', 'header': 'DIRRAD  W/m2'},
+                                 {'parameter':'ShortWaveRadiation', 'header': 'SHWRAD  W/m2'},
                                  {'parameter':'GlobalRadiation', 'header': 'SKYEMISS  W/m2'},
                                  {'parameter':'RelativeHumidity', 'header': 'RELHUM   %'},
                                  {'parameter':'VapourPressure', 'header': 'VAPPRES   Pa'},
@@ -488,16 +490,17 @@ def readOutput(path):
     # Get list of all files that need to be read
     files = getFileList(path, ext='.out')[1]
     # Extract output parameters from list
-    param = list(Counter([x.split('\\')[-1][:-12] for x in files]).keys())
+    param = list(Counter([re.sub('[0-9_]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
     # Extract numbers from list
-    num = list(Counter([x[-11:-4] for x in files]).keys())
+    num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
     # Read files
     output, geometry, elements = pd.DataFrame(columns=param), pd.DataFrame(columns=['geom_x','geom_y']), pd.DataFrame(columns=param)
     for n in num:
-        files_num = [x for x in files if x[-11:-4] == n]
+        files_num = [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]
         output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
         geom_x, geom_y = None, None
         for file in files_num:
+            p = re.sub('[0-9_]', '', file.split('\\')[-1][:-4])
             with open(file, 'r') as f:
                 l = 0
                 for line in f:
@@ -514,8 +517,8 @@ def readOutput(path):
                     l +=1
                 # Combine in dictionary
                 geometry_fn['geom_x'], geometry_fn['geom_y'],  = geom_x, geom_y
-                elements_fn[file.split('\\')[-1][:-12]] = elem_f
-                output_fn[file.split('\\')[-1][:-12]] = output_f
+                elements_fn[p] = elem_f
+                output_fn[p] = output_f
         # Combine in dataframe
         geometry.loc[n] = pd.Series(geometry_fn)
         elements.loc[n] = pd.Series(elements_fn)

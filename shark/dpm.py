@@ -46,15 +46,26 @@ def freezeThawCyclesDTU(T, RH, w=None, wcrit=1):
             if not w and w[t] > wcrit: frost_cyc_moist[t] = 1 # moist freeze-thaw cycles
     # Total number of moist freeze-thaw cycles
     frost_cyc_tot, frost_cyc_moist_tot = 0, 0
-    if frost_cyc[0] == 1: frost_cyc_tot = frost_cyc_tot+1
-    if frost_cyc_moist[0] == 1: frost_cyc_moist_tot = frost_cyc_moist_tot+1
+    frost_cyc_ser, frost_cyc_moist_ser = [0]*ts, [0]*ts
+    if frost_cyc[0] == 1: 
+        frost_cyc_tot = frost_cyc_tot+1
+        frost_cyc_ser[0] = 1
+    if frost_cyc_moist[0] == 1: 
+        frost_cyc_moist_tot = frost_cyc_moist_tot+1
+        frost_cyc_moist_ser[0] = 1
     for t in range(1,ts):
-        if frost_cyc[t] == 1 and frost_cyc[t-1] == 0: frost_cyc_tot = frost_cyc_tot+1
-        if frost_cyc_moist[t] == 1 and frost_cyc_moist[t-1] == 0: frost_cyc_moist_tot = frost_cyc_moist_tot+1
+        frost_cyc_ser[t] = frost_cyc_ser[t-1]
+        frost_cyc_moist_ser[t] = frost_cyc_moist_ser[t-1]
+        if frost_cyc[t] == 1 and frost_cyc[t-1] == 0: 
+            frost_cyc_tot = frost_cyc_tot+1
+            frost_cyc_ser[t] = frost_cyc_ser[t]+1
+        if frost_cyc_moist[t] == 1 and frost_cyc_moist[t-1] == 0: 
+            frost_cyc_moist_tot = frost_cyc_moist_tot+1
+            frost_cyc_moist_ser[t] = frost_cyc_moist_ser[t]+1
     
     if not w: frost_cyc_moist_tot = None
     
-    return frost_cyc_tot, frost_cyc_moist_tot
+    return frost_cyc_tot, frost_cyc_moist_tot, frost_cyc_ser, frost_cyc_moist_ser
 
 def mouldVTTupdate(T, RH, sens_class='vs', C_eff=1):
     """
@@ -169,7 +180,7 @@ def woodDecayVTT(T, RH):
     t_dec_lin = 17520
     for t in range(1,len(RH)):
         if ML[t-1] == 100:
-            ML[t,1] = 100
+            ML.append(100)
         else:
             # Critical time for decay to start
             t_crit = (2.3*T[t]+0.035*RH[t]-0.024*T[t]*RH[t])/(-42.9+0.14*T[t]+0.45*RH[t])*30*24 # [h]

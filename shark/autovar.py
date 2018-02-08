@@ -12,18 +12,18 @@ import multiprocessing
 
 def calcClim(args):
     path, sample, j, years, intclimType, simulRain = args
-#    # Exterior climate
-#    if 'start year' in sample:
-#        climateFun.extractClimateYears(path_climate=os.path.join(path['climate data'],sample.loc['ext climate']), year_start=sample.loc['start year'], years=years, number=j+1, path_save=path['ext climate'], exclude=['CloudCover','GlobalRadiation','TerrainCounterRadiation','TotalPressure'])
-#    else:
-#        climateFun.extractClimateYears(path_climate=os.path.join(path['climate data'],sample.loc['ext climate']), year_start=1, years=years, number=j+1, path_save=path['ext climate'], exclude=['CloudCover','GlobalRadiation','TerrainCounterRadiation','TotalPressure'])
-#    # Interior climate
-#    if intclimType == 'EN15026':
-#        climateFun.calcIntClimateEN15026(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), load=sample.loc['int climate'], number=j+1, path_save=path['int climate'])
-#    elif intclimType == 'EN13788':
-#        climateFun.calcIntClimateEN13788(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), load=sample.loc['int climate'], number=j+1, path_save=path['int climate'])
-#    else:
-#        print('Error: climate type not supported, use EN15026 or EN13788 instead')
+    # Exterior climate
+    if 'start year' in sample:
+        climateFun.extractClimateYears(path_climate=os.path.join(path['climate data'],sample.loc['ext climate']), year_start=sample.loc['start year'], years=years, number=j+1, path_save=path['ext climate'], exclude=['CloudCover','GlobalRadiation','TerrainCounterRadiation','TotalPressure'])
+    else:
+        climateFun.extractClimateYears(path_climate=os.path.join(path['climate data'],sample.loc['ext climate']), year_start=1, years=years, number=j+1, path_save=path['ext climate'], exclude=['CloudCover','GlobalRadiation','TerrainCounterRadiation','TotalPressure'])
+    # Interior climate
+    if intclimType == 'EN15026':
+        climateFun.calcIntClimateEN15026(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), load=sample.loc['int climate'], number=j+1, path_save=path['int climate'])
+    elif intclimType == 'EN13788':
+        climateFun.calcIntClimateEN13788(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), load=sample.loc['int climate'], number=j+1, path_save=path['int climate'])
+    else:
+        print('Error: climate type not supported, use EN15026 or EN13788 instead')
     # Rain
     if simulRain:
         climateFun.calcRainLoad(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), ori=sample.loc['wall orientation'], number=j+1, path_save=path['ext climate'])
@@ -102,9 +102,9 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
     
     # Calculate climate
     arg_pairs = [(path, samples.iloc[j], j, number_of_years, intclimType, simulRain) for j in range(samples.shape[0])]
-    for j in range(samples.shape[0]):
-        calcClim(arg_pairs[j])
-#    pool.map(calcClim, arg_pairs)
+#    for j in range(samples.shape[0]):
+#        calcClim(arg_pairs[j])
+    pool.map(calcClim, arg_pairs)
     
     ###########################################################################
     # Complete samples
