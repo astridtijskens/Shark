@@ -56,7 +56,7 @@ def varParam(args):
     
     # Save file
     file_save = os.path.join(path['variations'], 'Option_%03d_%03d.dpj' % (i,j+1))
-    fileobj = open(file_save, 'w')
+    fileobj = open(file_save, 'w', encoding='utf8')
     fileobj.writelines(dpj_file_new)
     fileobj.close()
     del fileobj, dpj_file_new

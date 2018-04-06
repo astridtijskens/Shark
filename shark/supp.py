@@ -35,7 +35,7 @@ def string2vec(string):
 
 def readDPJ(filename):
     #Read .dpj file line by line
-    file_obj = open(filename, 'r')
+    file_obj = open(filename, 'r', encoding='utf8')
     file = file_obj.readlines()
     file_obj.close()
     del file_obj
