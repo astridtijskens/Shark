@@ -393,7 +393,7 @@ def readDPJ(filename):
 
 def readccd(ccdfile, date=False):
     # Find header
-    with open(ccdfile, 'r', encoding='utf8') as f:
+    with open(ccdfile, 'r') as f:
         l = 0
         for line in f:
             if '0:00:00' in line:
