@@ -43,7 +43,7 @@ def varParam(args):
     # Change interior and exterior climate
     dpj_file_new = changeDPJ.cClimate(file=dpj_file_new, lines=dpj_lines, values=sample)
     # Change output files
-    dpj_file_new = changeDPJ.cOutput(file=dpj_file_new, lines=dpj_lines, value='%03i_%03i' %(i, j+1), path=path['output'], assignments=assignments)
+    dpj_file_new = changeDPJ.cOutput(file=dpj_file_new, lines=dpj_lines, value='%03i-%03i' %(i, j+1), path=path['output'], assignments=assignments)
     # Change X-discretisation
     if buildcomp != None:
         bc = [buildcomp['component'][0], buildcomp['cell'], buildcomp['component'][1]]
@@ -55,12 +55,12 @@ def varParam(args):
     dpj_file_new = changeDPJ.cMaterial(file=dpj_file_new, values=sample, assignments=assignments)
     
     # Save file
-    file_save = os.path.join(path['variations'], 'Option_%03d_%03d.dpj' % (i,j+1))
+    file_save = os.path.join(path['variations'], 'Option_%03d-%03d.dpj' % (i,j+1))
     fileobj = open(file_save, 'w', encoding='utf8')
     fileobj.writelines(dpj_file_new)
     fileobj.close()
     del fileobj, dpj_file_new
-    print('Created Option_%03d_%03d.dpj' % (i,j+1))
+    print('Created Option_%03d-%03d.dpj' % (i,j+1))
 
 def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, simulRain=True):
     # Directories
