@@ -393,7 +393,7 @@ def readDPJ(filename):
 
 def readccd(ccdfile, date=False):
     # Find header
-    with open(ccdfile, 'r') as f:
+    with open(ccdfile, 'r', encoding='utf8') as f:
         l = 0
         for line in f:
             if '0:00:00' in line:
@@ -501,7 +501,7 @@ def readOutput(path):
         geom_x, geom_y = None, None
         for file in files_num:
             p = re.sub('[0-9_]', '', file.split('\\')[-1][:-4])
-            with open(file, 'r') as f:
+            with open(file, 'r', encoding='utf8') as f:
                 l = 0
                 for line in f:
                     # Find geometry line
