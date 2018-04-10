@@ -23,19 +23,17 @@ scenario = {'parameter':'int climate', 'value':['a','b']} # currently, only one 
 # Uncertainty layer - Parameter distributions
 distributions = pd.DataFrame([{'parameter':'solar absorption',                          'type':'uniform',       'value':[0.4,0.8]},
                               {'parameter':'ext climate',                               'type':'discrete',      'value':['Oostende','Gent','StHubert','Gaasbeek']},
-                              {'parameter':'exterior heat transfer coefficient slope',  'type':'uniform',       'value':[1,8]},
+                              {'parameter':'exterior heat transfer coefficient slope',  'type':'uniform',       'value':[1,4]},
                               {'parameter':'brick material',                            'type':'discrete',      'value':['Brick1','Brick2','Brick3']},
                               {'parameter':'scale factor catch ratio',                  'type':'uniform',       'value':[0,1.5]},
                               {'parameter':'wall orientation',                          'type':'uniform',       'value':[0,360]},
                               {'parameter':'start year',                                'type':'discrete',      'value':24},
                               {'parameter':'brick dimension',                           'type':'uniform',       'value':[0.15,0.5]},
                               ])
-# Scenario layer - scenario's
-scenario = {'parameter':'int climate', 'value':['a','b']} # currently, only one scenario is supported
 
 # Sampling details
 sampling_strategy = 'sobol' # If load, load raw sampling scheme from .mat file; number of samples is not used
-samples_per_set = 18
+samples_per_set = 24
 sets = 3
 
 # Climate info

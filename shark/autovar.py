@@ -128,3 +128,6 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
 #            varParam((dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j))
         arg_pairs = [(dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j) for j in range(samples.shape[0])]
         pool.map(varParam, arg_pairs)
+        
+    pool.close()
+    pool.join()

@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 import re
+import multiprocessing
 
 def getFileList(dir_name, ext=''):
     file_dir_list = list()
@@ -486,16 +487,8 @@ def nameccd(climateparam):
         print('Error: coud not find climate parameter name')
     return name
 
-def readOutput(path):
-    # Get list of all files that need to be read
-    files = getFileList(path, ext='.out')[1]
-    # Extract output parameters from list
-    param = list(Counter([re.sub('[0-9_]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
-    # Extract numbers from list
-    num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
-    # Read files
-    output, geometry, elements = pd.DataFrame(columns=param), pd.DataFrame(columns=['geom_x','geom_y']), pd.DataFrame(columns=param)
-    for n in num:
+def readData(args):
+        n, files = args
         files_num = [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]
         output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
         geom_x, geom_y = None, None
@@ -519,8 +512,24 @@ def readOutput(path):
                 geometry_fn['geom_x'], geometry_fn['geom_y'],  = geom_x, geom_y
                 elements_fn[p] = elem_f
                 output_fn[p] = output_f
-        # Combine in dataframe
-        geometry.loc[n] = pd.Series(geometry_fn)
-        elements.loc[n] = pd.Series(elements_fn)
-        output.loc[n] = pd.Series(output_fn)
+        return output_fn, geometry_fn, elements_fn
+
+def readOutput(path):
+    # Get list of all files that need to be read
+    files = getFileList(path, ext='.out')[1]
+    # Extract output parameters from list
+    param = list(Counter([re.sub('[0-9_]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
+    # Extract numbers from list
+    num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
+    # Read files
+    num_cores = multiprocessing.cpu_count()-1
+    pool = multiprocessing.Pool(num_cores)
+    results = pool.map(readData, [(n, files) for n in num])
+    pool.close()
+    pool.join()
+    
+    output = pd.DataFrame([x[0] for x in results], columns=param, index=num)
+    geometry = pd.DataFrame([x[1] for x in results], columns=param, index=num)
+    elements = pd.DataFrame([x[2] for x in results], columns=param, index=num)
+    
     return output, geometry, elements
