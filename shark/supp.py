@@ -488,31 +488,30 @@ def nameccd(climateparam):
     return name
 
 def readData(args):
-        n, files = args
-        files_num = [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]
-        output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
-        geom_x, geom_y = None, None
-        for file in files_num:
-            p = re.sub('[0-9_]', '', file.split('\\')[-1][:-4])
-            with open(file, 'r', encoding='utf8') as f:
-                l = 0
-                for line in f:
-                    # Find geometry line
-                    if 'TABLE  GRID' in line: 
-                        geom_x = string2vec(f.readline())
-                        geom_y = string2vec(f.readline())
-                        l += 2
-                    # Find output start line
-                    if 'ELEMENTS' in line:
-                        elem_f = string2vec(line)
-                        output_f = np.loadtxt(file,skiprows=l+1,usecols=tuple(range(1,len(elem_f)+1)),dtype='f')
-                        break
-                    l +=1
-                # Combine in dictionary
-                geometry_fn['geom_x'], geometry_fn['geom_y'],  = geom_x, geom_y
-                elements_fn[p] = elem_f
-                output_fn[p] = output_f
-        return output_fn, geometry_fn, elements_fn
+    n, files_num = args
+    output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
+    geom_x, geom_y = None, None
+    for file in files_num:
+        p = re.sub('[0-9_]', '', file.split('\\')[-1][:-4])
+        with open(file, 'r', encoding='utf8') as f:
+            l = 0
+            for line in f:
+                # Find geometry line
+                if 'TABLE  GRID' in line: 
+                    geom_x = string2vec(f.readline())
+                    geom_y = string2vec(f.readline())
+                    l += 2
+                # Find output start line
+                if 'ELEMENTS' in line:
+                    elem_f = string2vec(line)
+                    output_f = np.loadtxt(file,skiprows=l+1,usecols=tuple(range(1,len(elem_f)+1)),dtype='f')
+                    break
+                l +=1
+            # Combine in dictionary
+            geometry_fn['geom_x'], geometry_fn['geom_y'],  = geom_x, geom_y
+            elements_fn[p] = elem_f
+            output_fn[p] = output_f
+    return output_fn, geometry_fn, elements_fn
 
 def readOutput(path):
     # Get list of all files that need to be read
@@ -524,7 +523,8 @@ def readOutput(path):
     # Read files
     num_cores = multiprocessing.cpu_count()-1
     pool = multiprocessing.Pool(num_cores)
-    results = pool.map(readData, [(n, files) for n in num])
+    args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]) for n in num]
+    results = pool.map(readData, args)
     pool.close()
     pool.join()
     
