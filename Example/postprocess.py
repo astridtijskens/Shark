@@ -17,10 +17,7 @@ from shark import supp, dpm
 import os
 import pandas as pd
 
-if __name__ == '__main__':
-    __spec__ = None
-    """Protect main code when using multiprocessing (supp.readOuptut())"""
-    
+def main():
     path = {}
     
     # Load samples
@@ -92,3 +89,8 @@ if __name__ == '__main__':
         ml = dpm.woodDecayVTT(T, RH)
         ML_beam.append(ml)
     damage['wood mass loss beam'] = ML_beam
+
+"""Protect main code when using multiprocessing (supp.readOuptut())"""
+if __name__ == '__main__':
+    __spec__ = None
+    main()

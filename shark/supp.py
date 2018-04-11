@@ -489,6 +489,7 @@ def nameccd(climateparam):
 
 def readData(args):
     n, files_num = args
+    print(n)
     output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
     geom_x, geom_y = None, None
     for file in files_num:
@@ -521,9 +522,9 @@ def readOutput(path):
     # Extract numbers from list
     num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
     # Read files
+    args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]) for n in num]
     num_cores = multiprocessing.cpu_count()-1
     pool = multiprocessing.Pool(num_cores)
-    args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]) for n in num]
     results = pool.map(readData, args)
     pool.close()
     pool.join()

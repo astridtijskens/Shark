@@ -53,7 +53,7 @@ def main(scenario, dist, runs, sets, strat, path):
                     high = p1+1
                     values = randint.ppf(x, low=1, high=high).tolist()
                 else: 
-                    high = len(p1)-1
+                    high = len(p1)
                     values = randint.ppf(x, low=0, high=high).tolist()
                     values = [p1[int(x)] for x in values]
                 sdf[dist.get_value(i, 'parameter')] = values
