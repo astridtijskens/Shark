@@ -489,11 +489,10 @@ def nameccd(climateparam):
 
 def readData(args):
     n, files_num = args
-    print(n)
     output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
     geom_x, geom_y = None, None
     for file in files_num:
-        p = re.sub('[0-9_]', '', file.split('\\')[-1][:-4])
+        p = re.sub('[0-9_-]', '', file.split('\\')[-1][:-4])
         with open(file, 'r', encoding='utf8') as f:
             l = 0
             for line in f:
@@ -503,7 +502,7 @@ def readData(args):
                     geom_y = string2vec(f.readline())
                     l += 2
                 # Find output start line
-                if 'ELEMENTS' in line:
+                if 'ELEMENTS' in line or 'SIDES 'in line:
                     elem_f = string2vec(line)
                     output_f = np.loadtxt(file,skiprows=l+1,usecols=tuple(range(1,len(elem_f)+1)),dtype='f')
                     break
@@ -514,23 +513,29 @@ def readData(args):
             output_fn[p] = output_f
     return output_fn, geometry_fn, elements_fn
 
-def readOutput(path):
+def readOutput(path, exclude):
     # Get list of all files that need to be read
-    files = getFileList(path, ext='.out')[1]
+    files_all = getFileList(path, ext='.out')[1]
+    files = list()
+    for f in files_all:
+        if not any(e in f for e in exclude):
+            files.append(f)
     # Extract output parameters from list
-    param = list(Counter([re.sub('[0-9_]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
+    param = list(Counter([re.sub('[0-9_-]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
     # Extract numbers from list
     num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
+    do = [[int(x.split('-')[0]) for x in num], [int(x.split('-')[1]) for x in num]]
+    tuples = list(zip(*do))
     # Read files
-    args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]) for n in num]
     num_cores = multiprocessing.cpu_count()-1
     pool = multiprocessing.Pool(num_cores)
+    args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]) for n in num]
     results = pool.map(readData, args)
     pool.close()
     pool.join()
     
-    output = pd.DataFrame([x[0] for x in results], columns=param, index=num)
-    geometry = pd.DataFrame([x[1] for x in results], columns=param, index=num)
-    elements = pd.DataFrame([x[2] for x in results], columns=param, index=num)
+    output = pd.DataFrame([x[0] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
+    geometry = pd.DataFrame([x[1] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
+    elements = pd.DataFrame([x[2] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
     
     return output, geometry, elements

@@ -21,7 +21,9 @@ def sobol(m, dim, sets=1):
         design = np.vstack((design,d))
     return design
 
-def main(scenario, dist, runs, sets, strat, path):
+def main(scenario, dist, runs, sets, strat, path, seq=None):
+    if not os.path.exists(path):
+        os.mkdir(path)
     if strat == 'load':
         # load file
         file = os.path.join(path,'samples_raw.mat')
@@ -33,6 +35,13 @@ def main(scenario, dist, runs, sets, strat, path):
         # create raw sampling scheme
         if strat == 'sobol':
             samples_raw = sobol(m=runs, dim=dist.shape[0],sets=sets)
+        elif strat == 'sobol convergence':
+            try:
+                samples_raw = np.load(os.path.join(path,'samples_'+str(seq)+'.npy'))
+            except FileNotFoundError:
+                samples_raw = sobol(m=2**12, dim=dist.shape[0],sets=1)
+                np.save(os.path.join(path,'samples_'+str(seq)), samples_raw)
+            samples_raw = samples_raw[0:runs,:]
         else:
             print('''Error: This sampling strategy is not supperted. Currently only 'sobol' and 'load' are implemented.''')
     # Add keys to dictionary
@@ -45,10 +54,10 @@ def main(scenario, dist, runs, sets, strat, path):
         sdf = pd.DataFrame({})
         sdf[scenario['parameter']] = [s]*samples_raw.shape[0]
         for i in range(dist.shape[0]):
-            dist_type = dist.get_value(i, 'type')
+            dist_type = dist.at[i, 'type']
             x = samples_raw[:,i]
             if dist_type == 'discrete':
-                p1 = dist.get_value(i, 'value')
+                p1 = dist.at[i, 'value']
                 if isinstance(p1, int): 
                     high = p1+1
                     values = randint.ppf(x, low=1, high=high).tolist()
@@ -56,22 +65,26 @@ def main(scenario, dist, runs, sets, strat, path):
                     high = len(p1)
                     values = randint.ppf(x, low=0, high=high).tolist()
                     values = [p1[int(x)] for x in values]
-                sdf[dist.get_value(i, 'parameter')] = values
+                sdf[dist.at[i, 'parameter']] = values
             elif dist_type == 'uniform':
-                p1 = dist.get_value(i, 'value')[0]
-                p2 = dist.get_value(i, 'value')[1]
+                p1 = dist.at[i, 'value'][0]
+                p2 = dist.at[i, 'value'][1]
                 values = uniform.ppf(x, loc=p1, scale=p2-p1).tolist()
-                sdf[dist.get_value(i, 'parameter')] = values
+                sdf[dist.at[i, 'parameter']] = values
             elif dist_type == 'normal':
-                p1 = dist.get_value(i, 'value')[0]
-                p2 = dist.get_value(i, 'value')[1]
+                p1 = dist.at[i, 'value'][0]
+                p2 = dist.at[i, 'value'][1]
                 values = norm.ppf(x, loc=p1, scale=p2).tolist()
-                sdf[dist.get_value(i, 'parameter')] = values
+                sdf[dist.at[i, 'parameter']] = values
             else:
                 print('ERROR: distribution type not supported')
                 sys.exit()
         samples = samples.append(sdf, ignore_index=True)
     # Save samples
-    samples.to_excel(os.path.join(path,'samples.xlsx'))
-    samples.to_pickle(os.path.join(path,'samples'))
+    if seq == None:
+        name = 'samples'
+    else:
+        name = 'samples_'+str(seq)
+    samples.to_excel(os.path.join(path, name+'.xlsx'))
+    samples.to_pickle(os.path.join(path,name))
     return samples

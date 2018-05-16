@@ -57,8 +57,8 @@ def cOutput(file, lines, value, path, assignments):
             string = string[:string.rfind(".out")] + '_'+str(value) + string[string.rfind('.out'):]
             file[line] = string
     for a in assignments.index.values:
-        if '.out' in assignments.get_value(a,'name'):
-            line = assignments.get_value(a,'line')+1
+        if '.out' in assignments.at[a,'name']:
+            line = assignments.at[a,'line']+1
             string = file[line]
             string = string[:string.rfind(".out")] + '_'+str(value) + string[string.rfind('.out'):]
             file[line] = string
@@ -88,9 +88,9 @@ def cDiscretisation(file, lines, values, steps_change, steps_keep, col, assignme
             continue
     # Change assignment ranges
     for a in assignments.index.values:
-        line = assignments.get_value(a,'line')
+        line = assignments.at[a,'line']
         string = file[line]
-        string = string[:string.rfind("=")+2] + str(assignments.get_value(a,'range')).strip('[]').replace(',','') +'\n'
+        string = string[:string.rfind("=")+2] + str(assignments.at[a,'range']).strip('[]').replace(',','') +'\n'
         file[line] = string
     return file
 
@@ -99,8 +99,8 @@ def cMaterial(file, values, assignments):
         if 'material' in param:
             mat = param.replace('material', '').strip().lower()
             for a in assignments.index.values:
-                 if mat in assignments.get_value(a,'name').lower() and assignments.get_value(a,'type') =='MATERIAL':
-                     line = assignments.get_value(a,'line')+1
+                 if mat in assignments.at[a,'name'].lower() and assignments.at[a,'type'] =='MATERIAL':
+                     line = assignments.at[a,'line']+1
                      string = file[line]
                      string = string[:string.rfind("=")+2] + values[param] +'\n'
                      file[line] = string

@@ -43,7 +43,7 @@ def freezeThawCyclesDTU(T, RH, w=None, wcrit=1):
     for t in range(ts):
         if T[t] < T0 and RH[t] >= RH_freeze[t]: 
             frost_cyc[t] = 1 # freeze-thaw cycles
-            if not w and w[t] > wcrit: frost_cyc_moist[t] = 1 # moist freeze-thaw cycles
+            if w and w[t] > wcrit: frost_cyc_moist[t] = 1 # moist freeze-thaw cycles
     # Total number of moist freeze-thaw cycles
     frost_cyc_tot, frost_cyc_moist_tot = 0, 0
     frost_cyc_ser, frost_cyc_moist_ser = [0]*ts, [0]*ts

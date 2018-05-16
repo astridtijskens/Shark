@@ -7,10 +7,17 @@ Created on Tue Nov 28 11:35:34 2017
 import os
 import subprocess
 import re
+import multiprocessing
 
-def main():
-    print()
-    return
+def main(delphin_executable, files, feedback=True):
+    args = [(delphin_executable, f, feedback) for f in files]
+#    for a in args:
+#        delphin_solver(a)
+    num_cores = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(num_cores, maxtasksperchild=16)
+    pool.map(delphin_solver, args)
+    pool.close()
+    pool.join()
 
 def checkFinSim(files):
     # Create list of .output files
@@ -30,9 +37,9 @@ def checkFinSim(files):
             status.append(False)
     return status
 
-def adjustRelTol(filename):
+def adjustRelTol(filename, feedback):
     #Read .dpj file line by line
-    file_obj = open(filename, 'r')
+    file_obj = open(filename, 'r', encoding='utf8')
     file = file_obj.readlines()
     file_obj.close()
     del file_obj
@@ -49,15 +56,16 @@ def adjustRelTol(filename):
     string = re.sub(rel_tol_old, '%.4e' % rel_tol_new, string)
     file[l] = string
     # write new Delphin file
-    file_obj = open(filename, 'w')
+    file_obj = open(filename, 'w', encoding='utf8')
     file_obj.writelines(file)
     file_obj.close()
     del file_obj, file
-    print('Adjusted relative tolerance of ' + filename.split('\\')[-1])
+    if feedback:
+        print('Adjusted relative tolerance of ' + filename.split('\\')[-1])
 
-def adjustMaxOrder(filename):
+def adjustMaxOrder(filename, feedback):
     #Read .dpj file line by line
-    file_obj = open(filename, 'r')
+    file_obj = open(filename, 'r', encoding='utf8')
     file = file_obj.readlines()
     file_obj.close()
     del file_obj
@@ -73,36 +81,37 @@ def adjustMaxOrder(filename):
     string = re.sub(max_order_old, '2', string)
     file[l] = string
     # write new Delphin file
-    file_obj = open(filename, 'w')
+    file_obj = open(filename, 'w', encoding='utf8')
     file_obj.writelines(file)
     file_obj.close()
     del file_obj, file
-    print('Adjusted max order method of ' + filename.split('\\')[-1])
+    if feedback:
+        print('Adjusted max order method of ' + filename.split('\\')[-1])
 
-def delphin_solver(delphin_executable, q):
+def delphin_solver(args):
+    delphin_executable, filename, feedback = args
     t = 1
     while True:
-        # get a new task from the Queue
-        filename = q.get()
-        print ('Running: ' + filename.split('\\')[-1])
-        status = subprocess.call([delphin_executable , "-x", "-v0", filename])
-        # tell the Queue that the task was done
-        q.task_done()
+        if feedback:
+            print ('Running: ' + filename.split('\\')[-1])
+        status = subprocess.run([delphin_executable , "-x", "-v0", filename], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
         # if the simulation was succesfull, print
-        if not status:
-            print('Finished: ' + filename.split('\\')[-1])
+        if not status.returncode:
+            if feedback:
+                print('Finished: ' + filename.split('\\')[-1])
+            break
         # if the simulation was unsuccesfull:
-        elif status:
+        else:
             if t <= 3:
                 # Adjust relative tolerance and re-add file to queue
-                adjustRelTol(filename)
-                q.put(filename)
-                t = t+1
+                adjustRelTol(filename, feedback)
+                t += 1
             elif t == 4:
                 # If files didn't successfully simulate after 3 tries of adjustRelTol, adjust the max. order method
-                adjustMaxOrder(filename)
-                q.put(filename)
-                t = t+1
-            else:
+                adjustMaxOrder(filename, feedback)
+                t += 1
+            elif feedback:
                 # If files didn't successfully simulate after of adjustMaxOrder, there is a problem with the file itself
                 print('Error: cannot simulate ' + filename.split('\\')[-1])
+                break
+            

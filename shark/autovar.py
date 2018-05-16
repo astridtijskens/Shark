@@ -11,7 +11,7 @@ import sys
 import multiprocessing
 
 def calcClim(args):
-    path, sample, j, years, intclimType, simulRain = args
+    path, sample, j, years, intclimType, simulRain, feedback = args
     # Exterior climate
     if 'start year' in sample:
         climateFun.extractClimateYears(path_climate=os.path.join(path['climate data'],sample.loc['ext climate']), year_start=sample.loc['start year'], years=years, number=j+1, path_save=path['ext climate'], exclude=['CloudCover','GlobalRadiation','TerrainCounterRadiation','TotalPressure'])
@@ -22,21 +22,22 @@ def calcClim(args):
         climateFun.calcIntClimateEN15026(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), load=sample.loc['int climate'], number=j+1, path_save=path['int climate'])
     elif intclimType == 'EN13788':
         climateFun.calcIntClimateEN13788(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), load=sample.loc['int climate'], number=j+1, path_save=path['int climate'])
-    else:
+    elif feedback:
         print('Error: climate type not supported, use EN15026 or EN13788 instead')
     # Rain
     if simulRain:
         climateFun.calcRainLoad(path_climate=os.path.join(path['ext climate'], '%03i_' %(j+1)), ori=sample.loc['wall orientation'], number=j+1, path_save=path['ext climate'])
-    print('Created climates for sample ' + str(j+1))
+    if feedback:
+        print('Created climates for sample ' + str(j+1))
 
 def varParam(args):
-    dpj_file_new, dpj_lines, assignments, sample, path, buildcomp, x_discr, y_discr, i, j = args
+    dpj_file_new, dpj_lines, assignments, sample, path, buildcomp, x_discr, y_discr, i, j, feedback = args
     # Exterior climate file, incl. path
     ext_climate_file = os.path.join(path['ext climate'], '%03i_' %(j+1))
-    sample.set_value('ext climate',ext_climate_file)
+    sample.at['ext climate'] = ext_climate_file
     # Interio climate file, incl. path
     int_climate_file = os.path.join(path['int climate'], '%03i_' %(j+1))
-    sample.set_value('int climate',int_climate_file)
+    sample.at['int climate'] = int_climate_file
     
     # Change parameters
     dpj_file_new = changeDPJ.cParameter(file=dpj_file_new, lines=dpj_lines, values=sample)
@@ -60,9 +61,10 @@ def varParam(args):
     fileobj.writelines(dpj_file_new)
     fileobj.close()
     del fileobj, dpj_file_new
-    print('Created Option_%03d-%03d.dpj' % (i,j+1))
+    if feedback:
+        print('Created Option_%03d-%03d.dpj' % (i,j+1))
 
-def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, simulRain=True):
+def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, simulRain=True, seq=None, start_num=0, feedback=True):
     # Directories
     # Load climate directory
     with open(os.path.join(os.path.dirname(__file__), 'data', 'dir_ext_clim.txt'), 'r') as f: path['climate data'] = f.readline()
@@ -72,25 +74,37 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
     design_options = {}
     design_options['list'], design_options['path list'] = supp.getFileList(path['design options'], '.dpj') #Create list of all original Delphin files
     # interior climate
-    path['int climate'] = os.path.join(path['delphin folder'], 'Interior Climate')
+    if seq == None:
+        path['int climate'] = os.path.join(path['delphin folder'], 'Interior Climate')
+    else:
+        path['int climate'] = os.path.join(path['delphin folder'], 'Interior Climate', str(seq))
     if not os.path.exists(path['int climate']):
         os.mkdir(path['int climate'])
     # exterior climate
-    path['ext climate'] = os.path.join(path['delphin folder'], 'Exterior Climate')
+    if seq == None:
+        path['ext climate'] = os.path.join(path['delphin folder'], 'Exterior Climate')
+    else:
+        path['ext climate'] = os.path.join(path['delphin folder'], 'Exterior Climate', str(seq))
     if not os.path.exists(path['ext climate']):
         os.mkdir(path['ext climate'])
     # variations folder
-    path['variations'] = os.path.join(path['delphin folder'], 'Variations')
+    if seq == None:
+        path['variations'] = os.path.join(path['delphin folder'], 'Variations')
+    else:
+        path['variations'] = os.path.join(path['delphin folder'], 'Variations', str(seq))
     if not os.path.exists(path['variations']):
         os.mkdir(path['variations'])
     # output folder
-    path['output'] = os.path.join(path['delphin folder'], 'Output')
+    if seq == None:
+        path['output'] = os.path.join(path['delphin folder'], 'Output')
+    else:
+        path['output'] = os.path.join(path['delphin folder'], 'Output', str(seq))
     if not os.path.exists(path['output']):
         os.mkdir(path['output'])
     
     # Parrallel pool setting
-    num_cores = multiprocessing.cpu_count()-1
-    pool = multiprocessing.Pool(num_cores)
+    num_cores = min(multiprocessing.cpu_count(),len(samples))
+    pool = multiprocessing.Pool(num_cores, maxtasksperchild=16)
     
     ###########################################################################
     # Warning climate
@@ -98,10 +112,16 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
         print('ERROR: Constant interior climate is not yet implemented, use EN15026 or EN13788 instead.')
         sys.exit()
     if not simulRain:
-        print('WARNING: Wind driven rain is not calculated, are you sure?')
+        print('WARNING: Wind driven rain wil not be calculated')
+        
+    # Warning building component dimension change
+    if buildcomp == None:
+        print('WARNING: No building component dimensions will be changed')
+    else:
+        print('WARNING: dimensions of %s %i will be changed' % (buildcomp['dir'], buildcomp['cell']))
     
     # Calculate climate
-    arg_pairs = [(path, samples.iloc[j], j, number_of_years, intclimType, simulRain) for j in range(samples.shape[0])]
+    arg_pairs = [(path, samples.iloc[j], j+start_num, number_of_years, intclimType, simulRain, feedback) for j in range(samples.shape[0])]
 #    for j in range(samples.shape[0]):
 #        calcClim(arg_pairs[j])
     pool.map(calcClim, arg_pairs)
@@ -109,9 +129,9 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
     ###########################################################################
     # Complete samples
     if 'exterior heat transfer coefficient slope' in samples.columns and 'exterior vapour diffusion transfer coefficient slope' not in samples.columns:
-        samples['exterior vapour diffusion transfer coefficient slope'] = samples['exterior heat transfer coefficient slope']*7.7e-9
+        samples = samples.assign(**{'exterior vapour diffusion transfer coefficient slope' : lambda x: x['exterior heat transfer coefficient slope']*7.7e-9})
     if 'exterior vapour diffusion transfer coefficient slope' in samples.columns and 'exterior heat transfer coefficient slope' not in samples.columns :
-        samples['exterior heat transfer coefficient slope'] = samples['exterior vapour diffusion transfer coefficient slope']/7.7e-9
+        samples = samples.assign(**{'exterior heat transfer coefficient slope' : lambda x: x['exterior vapour diffusion transfer coefficient slope']/7.7e-9})
     if 'start year' in samples.columns:
         samples = samples.drop('start year',1)
     ###########################################################################
@@ -125,9 +145,9 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
         # INNER LOOP: Loop over samples
         # For each sample, change parameters in current .dpj file (option i) and save as new .dpj file (Option_i_j.dpj)
 #        for j in range(samples.shape[0]):
-#            varParam((dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j))
-        arg_pairs = [(dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j) for j in range(samples.shape[0])]
+#            varParam((dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j+start_num, feedback))
+        arg_pairs = [(dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j+start_num, feedback) for j in range(samples.shape[0])]
         pool.map(varParam, arg_pairs)
-        
+    
     pool.close()
     pool.join()

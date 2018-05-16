@@ -9,10 +9,10 @@ Simulations are done in parallel, to speed up the simulation time.
 """
 
 # Chech first which simulations were already run successfully? and skip these
-check_finished_simulations = True
+check_finished_simulations = False
 
 # How many CP's schould NOT be used?
-cpu_unused = 0
+cpu_unused = 2
 
 # Specify the path to the Delphin executable
 delphin_executable = 'C:\Program Files (x86)\IBK\Delphin 5.8\delphin_solver.exe'
@@ -25,8 +25,6 @@ delphin_executable = 'C:\Program Files (x86)\IBK\Delphin 5.8\delphin_solver.exe'
 
 from shark import supp, solver
 import os
-import threading, queue
-import multiprocessing
 
 def main():
     # read variations path
@@ -43,19 +41,8 @@ def main():
         print('Simulating all %i files' % len(simstatus))
     simfiles = [x for i,x in enumerate(files) if not simstatus[i]]
     
-    # Run simulations
-    num_cores = multiprocessing.cpu_count()
-    q = queue.Queue()
-    # create threads
-    for i in range (num_cores):
-        t = threading.Thread(target = solver.delphin_solver, args = (delphin_executable,q))
-        t.daemon = True
-        t.start()
-    # add project files to the queue
-    for f in simfiles:
-        q.put(f)
-    # wait untill all tasks are done
-    q.join()
+    if simfiles:
+        solver.main(delphin_executable, simfiles, feedback=True)
     
     print('Done!')
 
