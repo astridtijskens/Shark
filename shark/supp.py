@@ -488,7 +488,7 @@ def nameccd(climateparam):
     return name
 
 def readData(args):
-    n, files_num = args
+    n, files_num, delete = args
     output_fn, geometry_fn, elements_fn = dict(), dict(), dict()
     geom_x, geom_y = None, None
     for file in files_num:
@@ -511,31 +511,39 @@ def readData(args):
             geometry_fn['geom_x'], geometry_fn['geom_y'],  = geom_x, geom_y
             elements_fn[p] = elem_f
             output_fn[p] = output_f
+        if delete:
+            os.remove(file)
     return output_fn, geometry_fn, elements_fn
 
-def readOutput(path, exclude):
+def readOutput(path, exclude=None, delete=False):
     # Get list of all files that need to be read
     files_all = getFileList(path, ext='.out')[1]
     files = list()
-    for f in files_all:
-        if not any(e in f for e in exclude):
-            files.append(f)
-    # Extract output parameters from list
-    param = list(Counter([re.sub('[0-9_-]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
-    # Extract numbers from list
-    num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
-    do = [[int(x.split('-')[0]) for x in num], [int(x.split('-')[1]) for x in num]]
-    tuples = list(zip(*do))
-    # Read files
-    num_cores = multiprocessing.cpu_count()-1
-    pool = multiprocessing.Pool(num_cores)
-    args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n]) for n in num]
-    results = pool.map(readData, args)
-    pool.close()
-    pool.join()
-    
-    output = pd.DataFrame([x[0] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
-    geometry = pd.DataFrame([x[1] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
-    elements = pd.DataFrame([x[2] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
-    
-    return output, geometry, elements
+    if exclude:
+        for f in files_all:
+            if not any(e in f for e in exclude):
+                files.append(f)
+    else:
+        files = files_all
+    if not files:
+        return [], [], []
+    else:
+        # Extract output parameters from list
+        param = list(Counter([re.sub('[0-9_-]', '', x.split('\\')[-1][:-4]) for x in files]).keys())
+        # Extract numbers from list
+        num = list(Counter([re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] for x in files]).keys())
+        do = [[int(x.split('-')[0]) for x in num], [int(x.split('-')[1]) for x in num]]
+        tuples = list(zip(*do))
+        # Read files
+        num_cores = multiprocessing.cpu_count()-1
+        pool = multiprocessing.Pool(num_cores)
+        args = [(n, [x for x in files if re.sub('[a-zA-Z]', '', x[:-4]).split('_')[-1] == n], delete) for n in num]
+        results = pool.map(readData, args)
+        pool.close()
+        pool.join()
+        
+        output = pd.DataFrame([x[0] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
+        geometry = pd.DataFrame([x[1] for x in results], columns=param, index=pd.MultiIndex.from_tuples(tuples))
+        elements = pd.DataFrame([x[2] for x in results], columns = param, index = pd.MultiIndex.from_tuples(tuples))
+
+        return output, geometry, elements

@@ -115,9 +115,9 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
         print('WARNING: Wind driven rain wil not be calculated')
         
     # Warning building component dimension change
-    if buildcomp == None:
+    if buildcomp == None and feedback:
         print('WARNING: No building component dimensions will be changed')
-    else:
+    elif feedback:
         print('WARNING: dimensions of %s %i will be changed' % (buildcomp['dir'], buildcomp['cell']))
     
     # Calculate climate

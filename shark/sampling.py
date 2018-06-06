@@ -37,18 +37,23 @@ def main(scenario, dist, runs, sets, strat, path, seq=None):
             samples_raw = sobol(m=runs, dim=dist.shape[0],sets=sets)
         elif strat == 'sobol convergence':
             try:
-                samples_raw = np.load(os.path.join(path,'samples_'+str(seq)+'.npy'))
+                samples_raw = np.load(os.path.join(path,'samples_raw_'+str(seq)+'.npy'))
+                samples = pd.read_pickle(os.path.join(path,'samples_'+str(seq)))
             except FileNotFoundError:
                 samples_raw = sobol(m=2**12, dim=dist.shape[0],sets=1)
-                np.save(os.path.join(path,'samples_'+str(seq)), samples_raw)
-            samples_raw = samples_raw[0:runs,:]
+                np.save(os.path.join(path,'samples_raw_'+str(seq)), samples_raw)
+
+            samples_raw = samples_raw[sets:sets+runs,:]
         else:
             print('''Error: This sampling strategy is not supperted. Currently only 'sobol' and 'load' are implemented.''')
-    # Add keys to dictionary
-    samples = pd.DataFrame({})
-    samples[scenario['parameter']] = []
-    for p in dist['parameter']:
-        samples[p] = []
+    try:
+        samples = samples
+    except NameError:
+        samples = pd.DataFrame({})
+        samples[scenario['parameter']] = []
+        for p in dist['parameter']:
+            samples[p] = []
+    
     # Add samples to dictionary
     for s in scenario['value']:
         sdf = pd.DataFrame({})

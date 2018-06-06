@@ -12,7 +12,7 @@ setup(
     name="SHARK",
 
     # Version number (initial):
-    version="0.3.0",
+    version="0.3.1",
 
     # Application author details:
     author="Astrid Tijskens",

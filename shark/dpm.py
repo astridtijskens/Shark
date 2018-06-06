@@ -152,7 +152,7 @@ def mouldVTTupdate(T, RH, sens_class='vs', C_eff=1):
             dt_unfav = 0
             dMdt_decline = 0
         # Mould index
-        M.append(max(0, M[t-1] + dMdt*dt + C_eff*dMdt_decline*dt)) # [-]
+        M.append(max(0, m.ceil((M[t-1] + dMdt*dt + C_eff*dMdt_decline*dt)*2/2))) # [-]
     
     return M
 
@@ -196,6 +196,6 @@ def woodDecayVTT(T, RH):
                 MLdt = max(0, -5.96*10**(-2)+1.96*10**(-4)*T[t]+6.25*10**(-4)*RH[t]) # [%/h] MLdt can not be negative
             else:
                 MLdt = 0
-            ML.append(min(100, ML[t-1] + MLdt*dt)) # [%] ML can only increase to 100
+            ML.append(min(100, int(ML[t-1] + MLdt*dt))) # [%] ML can only increase to 100
     
     return ML
