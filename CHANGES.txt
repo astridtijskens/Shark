@@ -10,12 +10,6 @@ supp.py - readOutput(...)
 autovar.py
 * Added functionality to disable feedback during simulation
 
-dpm.py - woodDecayVTT(...)
-* Added round result to nearest integer
-
-dpm.py - mouldVTTupdate(...)
-* Added round rousult to nearest multiple of 0.5
-
 
 V0.3.0
 Added functionality to monitor convergence and add samples sequentially - see example 2
