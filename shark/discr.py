@@ -230,7 +230,7 @@ def adjust_ranges(selection_range, old_range, new_range, x_direction):
                 # NOTE: if we cut out a section, top will be > then bottom, allowing us to remove deleted assignments later on
             # (2) If the selected range m_removed was a part of this selection, we only need to move the bottom boundary
             elif selection_range[1] <= old_range[1] and selection_range[3] >= old_range[3]:
-                selection_range[2] = selection_range[3] + y_move
+                selection_range[3] = selection_range[3] + y_move
                 # (3) and (4) are only valid if the new range is cut out if (newRange(4) - newRange(2)) < 0
             else:
                 # check for option (3)
@@ -259,11 +259,12 @@ def modify_X_steps(new_steps, old_left_col, old_right_col, x_steps, rows, assign
 def modify_Y_steps(new_steps, old_top_row, old_bottom_row, cols, y_steps, assignments):
     # Replace discretisation in Y direction by newly created discretisation steps
     ysteps_new = y_steps[:]
-    ysteps_new[old_top_row:old_bottom_row+1] = new_steps
+    ysteps_new[old_top_row-1:old_bottom_row] = new_steps
     # Loop over all assignments and update the assignments
     old_range = [0, old_top_row-1, cols-1, old_bottom_row-1]; #[left top right bottom]
     new_range = [0, old_top_row-1, cols-1, old_top_row+len(new_steps)-2]; #[left top right bottom]
     assignments_new = pd.DataFrame(columns=['line','type','range','name'])
+    assignments_new[['line','type','name']] = assignments[['line','type','name']]
     for i in range(assignments.shape[0]):
         select_range = assignments.loc[i,'range'][:]
         assignments_new.loc[i,'range'] = adjust_ranges(selection_range=select_range, old_range=old_range, new_range=new_range, x_direction=False)

@@ -57,7 +57,7 @@ from shark import autovar, sampling
 import sys
 
 def main():
-    if len(buildcomp) !=2 or buildcomp != None:
+    if len(buildcomp) !=2 and buildcomp != None:
         print('ERROR: buildcomp has the wrong formatting, this should be [first column/row of building component, last column/row of building component]')
         sys.exit()
     if buildcomp != None and buildcomp_elem == None:

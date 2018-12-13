@@ -1,3 +1,7 @@
+V0.4.0
+discr.py
+* Bug fix for y-discretisation
+
 V0.3.1
 Updated manual
 

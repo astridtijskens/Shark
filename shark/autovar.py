@@ -144,8 +144,8 @@ def main(path, samples, buildcomp=None, number_of_years=1, intclimType=None, sim
         dpj_file_orig, x_discr_orig, y_discr_orig, assignments_orig, dpj_lines = supp.readDPJ(file_path)
         # INNER LOOP: Loop over samples
         # For each sample, change parameters in current .dpj file (option i) and save as new .dpj file (Option_i_j.dpj)
-#        for j in range(samples.shape[0]):
-#            varParam((dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j+start_num, feedback))
+        # for j in range(samples.shape[0]):
+        #     varParam((dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j+start_num, feedback))
         arg_pairs = [(dpj_file_orig[:], dpj_lines, assignments_orig, samples.iloc[j], path, buildcomp, x_discr_orig[:], y_discr_orig[:], i, j+start_num, feedback) for j in range(samples.shape[0])]
         pool.map(varParam, arg_pairs)
     
